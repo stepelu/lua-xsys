@@ -65,6 +65,16 @@ local table = merge(table, {
   join  = join,
 })
 
+-- Tonumber --------------------------------------------------------------------
+local function getton(x)
+  return x.__tonumber
+end
+
+local function tonumberx(x)
+  local ok, f = pcall(getton, x)
+  return (ok and f) and f(x) or tonumber(x)
+end
+
 -- String ----------------------------------------------------------------------
 -- CREDIT: Steve Dovan snippet.
 local function split(s, re)
@@ -92,6 +102,14 @@ local function trim(s)
   return (s:gsub("^%s*(.-)%s*$", "%1"))
 end
 
+local function adjustexp(s)
+  if s:sub(-3, -3) == "+" or s:sub(-3, -3) == "-" then
+    return s:sub(1, -3).."0"..s:sub(-2)
+  else
+    return s
+  end
+end
+
 local function width(x, chars)
   chars = chars or 9
   if chars < 9 then
@@ -111,17 +129,17 @@ local function width(x, chars)
   else
     local formatf = "%+"..chars.."."..(chars - 3).."f"
     local formate = "%+."..(chars - 8).."e"
-    x = tonumber(x) -- Could be cdata.
+    x = tonumberx(x) -- Could be cdata.
     local s = format(formatf, x)
     if x ~= x or abs(x) == 1/0 then return s end
-    if tonumber(s:sub(2, chars)) == 0 then -- It's small.
+    if tonumberx(s:sub(2, chars)) == 0 then -- It's small.
       if abs(x) ~= 0 then -- And not zero.
-        s = format(formate, x)
+        s = adjustexp(format(formate, x))
       end
     else
       s = s:sub(1, chars)
       if not s:sub(3, chars - 1):find('%.') then -- It's big.
-        s = format(formate, x)
+        s = adjustexp(format(formate, x))
       end
     end
     return s
@@ -249,7 +267,7 @@ return {
   exec     = exec,
   from     = from,
   copy     = copy,
-
+  tonumber = tonumberx,
   table    = table,
   string   = string,
   bit      = bit,

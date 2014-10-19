@@ -12,13 +12,10 @@
 -- TODO: Design exec API logging so that files are generated (useful for 
 -- TODO: debugging and profiling).
 
-local ffi     = require "ffi"
-local bit     = require "bit"
-local cfg     = require "xsys.cfg"
-local templet = require "xsys._dep.templet"
-
--- User-definable options:
-local logexec    = cfg.log.exec
+local ffi      = require "ffi"
+local bit      = require "bit"
+-- CREDIT: Peter Colberg's templet library:
+local templet  = require "xsys._dep.templet"
 
 local select, pairs, error, setmetatable = select, pairs, error, setmetatable
 local type, loadstring, setfenv, unpack = type, loadstring, setfenv, unpack
@@ -28,6 +25,7 @@ local format = string.format
 local abs = math.abs
 
 -- Table -----------------------------------------------------------------------
+-- TODO: Introduce optional trailing 'resv = onconflict(key, v, newv)'.
 local function merge(...)
   local o = {}
   local arg, n = { ... }, select("#", ...)
@@ -71,12 +69,17 @@ local function getton(x)
 end
 
 local function tonumberx(x)
-  local ok, f = pcall(getton, x)
-  return (ok and f) and f(x) or tonumber(x)
+  if type(x) ~= "table" and type(x) ~= "cdata" then
+    return tonumber(x)
+  else
+    local haston, ton = pcall(getton, x)
+    return (haston and ton) and ton(x) or tonumber(x)
+  end
 end
 
 -- String ----------------------------------------------------------------------
 -- CREDIT: Steve Dovan snippet.
+-- TODO: Clarify corner cases, make more robust.
 local function split(s, re)
   local i1, ls = 1, { }
   if not re then re = '%s+' end
@@ -152,18 +155,11 @@ local string = merge(string, {
   width = width,
 })
 
--- Template --------------------------------------------------------------------
--- CREDIT: Peter Colberg's Templet library.
-local template = templet.loadstring
-
 -- Exec ------------------------------------------------------------------------
 local function testexec(chunk, chunkname, fenv, ok, ...)
   if not ok then
     local err = select(1, ...)
-    error("execution error: [[ "..err.." ]] in chunk: [[\n"..chunk.."]]")
-  end
-  if logexec then -- Add location?
-    logexec(chunk, chunkname, fenv)
+    error("execution error: "..err)
   end
   return ...
 end
@@ -172,7 +168,7 @@ local function exec(chunk, chunkname, fenv)
   chunkname = chunkname or chunk
   local f, e = loadstring(chunk, chunkname)
   if not f then
-    error("parsing error: [[ "..e.." ]] in chunk: [[\n"..chunk.."]]")
+    error("parsing error: "..err)
   end
   if fenv then 
     setfenv(f, fenv)
@@ -190,48 +186,6 @@ local function from(what, keystr)
   o = concat(o, ",")
   local s = "return function(x) return "..o.." end"
   return exec(s, "from<"..keystr..">")(what)
-end
-
--- Copy ------------------------------------------------------------------------
-local copy_type = { } -- Dispatch table for copying single object based on type.
-
-local function copy_single(x)
-	return copy_type[type(x)](x)
-end
-
--- Table objects with optional copy member function.
--- Metatables are always shared.
-copy_type.table = function(x)
-  if x.copy then 
-    return x:copy()
-  else
-    local o = { }
-    for k, v in pairs(x) do
-      o[k] = copy_single(v)
-    end
-    return setmetatable(o, getmetatable(x))
-  end
-end
-
--- Cdata objects requires copy member function.
-copy_type.cdata = function(x)	return x:copy() end
-
--- Closures are shared.
-copy_type["function"] = function(x) return x end
-
--- These have value semantics no copy required.
-copy_type.string  = function(x) return x end
-copy_type.number  = function(x) return x end
-copy_type.boolean = function(x) return x end
-copy_type["nil"]	= function(x) return x end
-
--- Perform a "by-value" copy of multiple tables or cdata objects.
-local function copy(...)
-	local o = { }
-	for i=1,select("#",...) do
-		o[i] = copy_single(select(i, ...))
-	end
-	return unpack(o)
 end
 
 -- Bit -------------------------------------------------------------------------
@@ -256,6 +210,7 @@ local function lsb(x)
   return lsb_array[rshift(x, 26)]
 end
 
+-- TODO: Document.
 local bit = merge(bit, {
   lsb = lsb,
 })
@@ -263,10 +218,9 @@ local bit = merge(bit, {
 -- Export ----------------------------------------------------------------------
 
 return {
-  template = template,
+  template = templet.loadstring,
   exec     = exec,
   from     = from,
-  copy     = copy,
   tonumber = tonumberx,
   table    = table,
   string   = string,

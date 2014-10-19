@@ -26,7 +26,7 @@ local abs = math.abs
 
 -- Table -----------------------------------------------------------------------
 -- TODO: Introduce optional trailing 'resv = onconflict(key, v, newv)'.
-local function merge(...)
+local function union(...)
   local o = {}
   local arg, n = { ... }, select("#", ...)
   for a=1,n do
@@ -40,7 +40,7 @@ local function merge(...)
   return o
 end
 
-local function join(...)
+local function append(...)
   local o = { }
   local arg, n = { ... }, select("#", ...)
   local c = 0
@@ -58,9 +58,9 @@ local function join(...)
   return o
 end
 
-local table = merge(table, {
-  merge = merge,
-  join  = join,
+local table = union(table, {
+  union  = union,
+  append = append,
 })
 
 -- Tonumber --------------------------------------------------------------------
@@ -149,7 +149,7 @@ local function width(x, chars)
   end
 end
 
-local string = merge(string, {
+local string = union(string, {
   split = split,
   trim  = trim,
   width = width,
@@ -211,7 +211,7 @@ local function lsb(x)
 end
 
 -- TODO: Document.
-local bit = merge(bit, {
+local bit = union(bit, {
   lsb = lsb,
 })
 

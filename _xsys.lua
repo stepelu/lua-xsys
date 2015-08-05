@@ -166,7 +166,7 @@ end
 
 local function exec(chunk, chunkname, fenv)
   chunkname = chunkname or chunk
-  local f, e = loadstring(chunk, chunkname)
+  local f, err = loadstring(chunk, chunkname)
   if not f then
     error("parsing error: "..err)
   end

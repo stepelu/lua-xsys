@@ -58,10 +58,10 @@ local function append(...)
   return o
 end
 
-local table = union(table, {
-  union  = union,
-  append = append,
-})
+-- Another module might have modified the standard libraries, overwrite:
+local table = union(table)
+table.union = union
+table.append = append
 
 -- Tonumber --------------------------------------------------------------------
 local function getton(x)
@@ -149,11 +149,11 @@ local function width(x, chars)
   end
 end
 
-local string = union(string, {
-  split = split,
-  trim  = trim,
-  width = width,
-})
+-- Another module might have modified the standard libraries, overwrite:
+local string = union(string)
+string.split = split
+string.trim = trim
+string.width = width
 
 -- Exec ------------------------------------------------------------------------
 local function testexec(chunk, chunkname, fenv, ok, ...)
@@ -210,10 +210,9 @@ local function lsb(x)
   return lsb_array[rshift(x, 26)]
 end
 
--- TODO: Document.
-local bit = union(bit, {
-  lsb = lsb,
-})
+-- Another module might have modified the standard libraries, overwrite:
+local bit = union(bit)
+bit.lsb = lsb -- TODO: Document.
 
 -- Export ----------------------------------------------------------------------
 
